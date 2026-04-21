@@ -24,9 +24,17 @@ app.use((req, res, next) => {
 
 
 // ✅ MongoDB Connection (VERY IMPORTANT)
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.log("❌ MongoDB Error:", err));
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB Connected");
+  } catch (err) {
+    console.error("❌ MongoDB Error:", err);
+    process.exit(1);
+  }
+};
+
+connectDB();
 
 // Routes
 console.log("Loading auth routes...");
