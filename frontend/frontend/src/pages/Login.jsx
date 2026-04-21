@@ -2,13 +2,11 @@ import { useState } from "react";
 import axios from "../api/axios";
 
 function Login() {
-  const [mode, setMode] = useState("admin"); // "admin" | "user"
+  const [mode, setMode] = useState("admin");
 
-  // admin fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // user fields
   const [name, setName] = useState("");
   const [userPassword, setUserPassword] = useState("");
 
@@ -20,29 +18,42 @@ function Login() {
         password,
       });
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      const data = res.data;
 
-      window.location.href = "/admin";
-    } catch {
-      alert("Invalid admin credentials");
+      // 🔥 CLEAR OLD DATA FIRST (IMPORTANT)
+      localStorage.clear();
+
+      // 🔥 SAVE NEW DATA
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      console.log("LOGIN USER:", data.user);
+
+      // 🔥 STRICT ROLE CHECK
+      if (data.user.role === "admin") {
+        window.location.href = "/admin";
+      } else {
+        alert("You are not authorized as admin");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Invalid admin credentials");
     }
   };
 
-  // 👤 USER LOGIN (generic password 123456)
+  // 👤 USER LOGIN
   const handleUserLogin = async () => {
     try {
       if (userPassword !== "123456") {
         return alert("Password must be 123456");
       }
 
-      // You can use either endpoint:
-      // 1) public-login (no password required)
-      // 2) readerLogin (requires name exists + 123456)
-
       const res = await axios.post("/api/auth/public-login", {
         name,
       });
+
+      localStorage.clear();
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
@@ -57,7 +68,6 @@ function Login() {
     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
       <div className="bg-white p-8 rounded-2xl shadow w-80">
 
-        {/* 🔘 TOGGLE */}
         <div className="flex mb-4 rounded overflow-hidden">
           <button
             className={`w-1/2 py-2 ${
@@ -78,7 +88,6 @@ function Login() {
           </button>
         </div>
 
-        {/* 🔐 ADMIN FORM */}
         {mode === "admin" && (
           <>
             <h1 className="text-2xl font-bold mb-4 text-center">
@@ -109,7 +118,6 @@ function Login() {
           </>
         )}
 
-        {/* 👤 USER FORM */}
         {mode === "user" && (
           <>
             <h1 className="text-2xl font-bold mb-4 text-center">
