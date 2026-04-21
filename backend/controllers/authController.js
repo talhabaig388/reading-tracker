@@ -3,39 +3,37 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Reader = require("../models/Reader");
 
-// 🔐 Helper: generate token
+// 🔐 Generate JWT
 const generateToken = (user) => {
   return jwt.sign(
     {
-     id: user._id,
-    name: user.name,
-    email: user.email,
-    region: user.region,
-    role: user.role, // 👈 ADD THIS
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      region: user.region,
+      role: user.role,
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
 };
 
-// 🟢 REGISTER
+// 🟢 REGISTER (FORCE ADMIN)
 exports.register = async (req, res) => {
   try {
     const { name, email, password, region } = req.body;
 
+    // Check existing
     const existingUser = await TeamLead.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔥 ADMIN LOGIC
-    let role = "user";
-
-    if (email === "admin@readingtracker.com") {
-      role = "admin";
-    }
+    // 🔥 FORCE ROLE = ADMIN
+    const role = "admin";
 
     const newUser = await TeamLead.create({
       name,
@@ -48,14 +46,14 @@ exports.register = async (req, res) => {
     const token = generateToken(newUser);
 
     res.status(201).json({
-      message: "Team Lead registered",
+      message: "Admin created successfully",
       token,
       user: {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
         region: newUser.region,
-        role: newUser.role, // 🔥 IMPORTANT
+        role: newUser.role, // MUST be "admin"
       },
     });
   } catch (err) {
@@ -68,22 +66,18 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user
     const user = await TeamLead.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid email" });
     }
 
-    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    // Generate token
     const token = generateToken(user);
 
-    // Return clean response
     res.json({
       message: "Login successful",
       token,
@@ -92,7 +86,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         region: user.region,
-        role: user.role, // 🔥 ADD THIS
+        role: user.role,
       },
     });
   } catch (err) {
@@ -100,7 +94,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// 🟡 PUBLIC USER LOGIN (NO DB, NO PASSWORD)
+// 🟡 PUBLIC USER LOGIN
 exports.publicLogin = async (req, res) => {
   try {
     const { name } = req.body;
@@ -132,33 +126,30 @@ exports.publicLogin = async (req, res) => {
   }
 };
 
+// 🔵 READER LOGIN
 exports.readerLogin = async (req, res) => {
   try {
     const { name, password } = req.body;
 
-    // 🔐 Generic password check
     if (password !== "123456") {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    // 🔍 Find reader
     const reader = await Reader.findOne({ name });
 
     if (!reader) {
       return res.status(404).json({ message: "Reader not found" });
     }
 
-    // 🔑 Generate token
     const token = jwt.sign(
       {
         id: reader._id,
-        role: "user", // 👈 IMPORTANT
+        role: "user",
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // ✅ Response
     res.json({
       token,
       user: {
