@@ -65,14 +65,19 @@ exports.updateHours = async (req, res) => {
 };
 
 // 🔍 Reader Lookup (no login)
+// 🔍 Reader Lookup (no login)
 exports.lookupReader = async (req, res) => {
   try {
-    const { phone, teamLeadId } = req.body;
+    const { phone } = req.body;
 
-    const reader = await Reader.findOne({
-      phone,
-      teamLeadId: teamLeadId || "temp-id",
-    });
+    if (!phone) {
+      return res.status(400).json({ message: "Phone is required" });
+    }
+
+    // normalize phone (remove spaces, etc.)
+    const cleanPhone = phone.trim();
+
+    const reader = await Reader.findOne({ phone: cleanPhone });
 
     if (!reader) {
       return res.status(404).json({ message: "Reader not found" });
